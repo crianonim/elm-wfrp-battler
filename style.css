@@ -1,0 +1,32 @@
+.home-bg {
+  background-color: red;
+}
+.home-fg {
+  color: red;
+}
+
+.away-bg {
+  background-color: royalblue;
+}
+
+.away-fg {
+  color: royalblue;
+}
+
+.dead {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
+.current-character {
+    border: 3px solid
+}
+.character-block {
+    width: 150px;
+    height: 150px;
+    padding: 1em;
+    margin: 1em;
+}
+.characters-block {
+    display: flex
+}
