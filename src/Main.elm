@@ -28,7 +28,7 @@ main =
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { result = 0
-      , phase =  InBattle
+      , phase =  TeamSelection
       , characters =
             List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
                 |> Array.fromList
@@ -96,18 +96,12 @@ update msg model =
                 Nothing ->
                     ( model, Cmd.none )
 
-        SelectTeamForCharacter s ->
+        SelectTeamForCharacter id t ->
             let
-                _ = Debug.log "X" s
-                parts =
-                    String.split "-" s
-                        |> Array.fromList
 
-                id = 
-                    Array.get 0 parts |> Maybe.withDefault "0" |> String.toInt |> Maybe.withDefault 0
 
                 team =
-                    Character.stringToTeam (Array.get 1 parts |> Maybe.withDefault "no")
+                    Character.stringToTeam (t)
             in
             ( { model
                 | characters =
@@ -197,7 +191,7 @@ type Msg
     | AttackClick
     | NextCharacter
     | ChooseDefendant String
-    | SelectTeamForCharacter String
+    | SelectTeamForCharacter Int String
     | CommitTeamSelection
 
 
@@ -249,14 +243,14 @@ viewTeamSelection model =
                 (\c ->
                     div []
                         [ text c.name
-                        , select [ onInput SelectTeamForCharacter ]
+                        , select [ onInput (SelectTeamForCharacter c.id)]
                             (List.map
-                                (\x ->
+                                (\t ->
                                     option
-                                        [ Html.Attributes.value (characterToTeamString c x)
-                                        , Html.Attributes.selected (c.team == x)
+                                        [ Html.Attributes.value (Character.teamToString t)
+                                        , Html.Attributes.selected (c.team == t)
                                         ]
-                                        [ text (Character.teamToString x) ]
+                                        [ text (Character.teamToString t) ]
                                 )
                                 [ NoTeam, Home, Away ]
                             )
