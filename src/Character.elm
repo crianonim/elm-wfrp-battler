@@ -1,7 +1,6 @@
 module Character exposing (..)
 
 import Array exposing (Array)
-import Html.Attributes exposing (default, name, type_)
 
 
 type alias Character =
@@ -37,6 +36,7 @@ stringToTeam s =
 isInTeam : Character -> Bool
 isInTeam c=
  not (c.team == NoTeam)
+
 generateCharacterWithTeam (type_,team)=
  generateCharacter type_ |> addTeam team
 
@@ -46,7 +46,7 @@ generateCharacter type_ =
         base  = {
             name = "Bad"
             ,type_="Bad"
-            ,id=-1
+            ,id=0
             ,team=NoTeam
             ,baseHP = 0, currentHP=0, weaponDmg = 0, weaponSkill = 0
          }
@@ -80,13 +80,6 @@ addName name c=
 resetHP: Character -> Character
 resetHP c=
  {c|currentHP=c.baseHP}
-
-initCharacter : String -> { name : String, baseHP : Int, weaponDmg : Int, weaponSkill : Int } -> Character
-initCharacter type_ c =
-    { id = 0
-    , team = NoTeam
-    , baseHP = c.baseHP 
-    , name = c.name, currentHP = c.baseHP, type_ = type_, weaponDmg = c.weaponDmg, weaponSkill = c.weaponSkill }
 
 addTeam: Team -> Character -> Character
 addTeam team c=

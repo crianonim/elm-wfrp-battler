@@ -4,9 +4,8 @@ import Array exposing (Array)
 import Browser
 import Character exposing (Character, Team(..))
 import Dice
-import Dict
-import Html exposing (Attribute, Html, a, button, div, h1, hr, img, input, option, p, pre, select, text)
-import Html.Attributes exposing (class, selected, src, style, value)
+import Html exposing (Attribute, Html, button, div, option, p, select, text)
+import Html.Attributes exposing (class)
 import Html.Events exposing (onClick, onInput)
 import Platform.Cmd exposing (Cmd)
 import Random
@@ -82,14 +81,7 @@ update msg model =
             ( model, Random.generate Attack Dice.d100Generator )
 
         ChooseDefendant x ->
-            let
-                c =
-                    Debug.log ("X" ++ x)
-
-                i =
-                    String.toInt x
-            in
-            case i of
+            case String.toInt x of
                 Just xx ->
                     ( { model | defender = xx }, Cmd.none )
 
@@ -153,14 +145,6 @@ nextCharacter model =
     )
         |> characterTurnStart
 
-
-firstOpponent : Model -> Int
-firstOpponent model =
-    Character.listOfOpponents model.characters model.currentCharacter
-        |> List.map (\c -> c.id)
-        |> List.head
-        |> Maybe.withDefault -1
-        |> Debug.log "Testing"
 
 
 characterTurnStart : Model -> Model
@@ -261,13 +245,6 @@ viewTeamSelection model =
             )
         , button [onClick CommitTeamSelection] [text "Start"]
         ]
-
-
-characterToTeamString : Character -> Team -> String
-characterToTeamString c team =
-    String.fromInt c.id
-        ++ "-"
-        ++ Character.teamToString team
 
 
 viewInBattle : Model -> Html Msg
