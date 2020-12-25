@@ -238,11 +238,23 @@ viewInBattle : Model -> Html Msg
 viewInBattle model =
     div []
         [ p [] [ text "Battle is on!" ]
-        , div [class "characters-block"] (List.indexedMap (viewCharacter model) (Array.toList model.characters))
+        , div [class "sides-container"] [
+          div [class "side-home"] (List.map (viewCharacter model) (Character.charactersInTeam Home (Array.toList model.characters)))
+          ,div [class "sides-middle"] [
+               div [class "actions"] [text "actions"]
+               ,viewLog model.log]
+         ,div [class "side-away"] (List.map (viewCharacter model) (Character.charactersInTeam Away (Array.toList model.characters)))
+         ]
         , button [ onClick AttackClick ] [ text "Attack" ]
         , button [ onClick NextCharacter ] [ text "Next" ]
+        , div [class "characters-block"] (List.map (viewCharacter model) (Array.toList model.characters))
         , div [ ] [ viewListAliveCharacters model ]
         ]
+
+viewLog : List String -> Html msg
+viewLog log = div [class "log"] (List.map viewLogLine log)
+
+
 
 
 viewBattleFinished : Model -> Html msg
@@ -258,17 +270,18 @@ viewBattleFinished model =
         ]
 
 
-viewCharacter : Model -> Int -> Character.Character -> Html msg
-viewCharacter model i character =
+viewCharacter : Model -> Character.Character -> Html Msg
+viewCharacter model character =
     div
         ([ 
           classList [
               ("character-block",True)
               ,("dead",not <| Character.isAlive character)
-              ,("current-character",i == model.currentCharacter)
+              ,("current-character",character.id == model.currentCharacter)
               ,( "away-fg", character.team==Away)
               ,( "home-fg", character.team==Home)
           ]
+         ,onClick (ClickedCharacter character.id)
          ]
             
         )
