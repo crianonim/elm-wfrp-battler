@@ -33,9 +33,20 @@ stringToTeam s =
   "away" -> Away
   _ -> NoTeam
 
-isInTeam : Character -> Bool
-isInTeam c=
+isInAnyTeam : Character -> Bool
+isInAnyTeam c=
  c.team /= NoTeam
+
+isInTeam: Team -> Character -> Bool
+isInTeam team c=
+    c.team == team
+
+isOppositeTeam: Character -> Character -> Bool
+isOppositeTeam c1 c2 =not ( (c2.team == NoTeam) || (c1.team == NoTeam) || (c1.team == c2.team) )
+
+charactersInTeam : Team -> List Character -> List Character
+charactersInTeam team characters =
+    List.filter (isInTeam team) characters
 
 generateCharacterWithTeam (type_,team)=
  generateCharacter type_ |> addTeam team
@@ -106,7 +117,7 @@ attackCharacter roll attacker defender =
         dealDamage attacker defender
 
     else
-        ( defender, attacker.name ++ " missed " ++ defender.name )
+        ( defender, attacker.name ++ " missed a horrible wrong way a guy called" ++ defender.name )
 
 getCharacter : Int -> Array Character ->  Character
 getCharacter id characters=
@@ -119,7 +130,7 @@ updateCharacter character characters=
 listAliveCharacters : Array Character -> List Character
 listAliveCharacters arr =
     Array.filter isAlive arr
-    |> Array.filter isInTeam 
+    |> Array.filter isInAnyTeam
     |> Array.toList
 
 
@@ -127,8 +138,7 @@ isAlive : Character -> Bool
 isAlive character =
     character.currentHP > 0
 
-isOppositeTeam: Character -> Character -> Bool
-isOppositeTeam c1 c2 =not ( (c2.team == NoTeam) || (c1.team == NoTeam) || (c1.team == c2.team) )
+
 listOfOpponents : Array Character -> Int -> List Character
 listOfOpponents characters characterId =
     Array.filter isAlive characters
