@@ -3,6 +3,7 @@ module Character exposing (..)
 import Array exposing (Array)
 
 
+
 type alias Character =
     { name : String
     , type_ : String
@@ -145,3 +146,6 @@ listOfOpponents characters characterId =
         |> Array.filter (\c -> not (c.id == characterId))
         |> Array.filter (isOppositeTeam (Array.get characterId characters |> Maybe.withDefault badCharacter))
         |> Array.toList
+
+isAttackable attacker character=
+ (isOppositeTeam attacker character) && (isAlive character)
