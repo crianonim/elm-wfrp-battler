@@ -12,6 +12,7 @@ type alias Character =
     , weaponDmg : Int
     , weaponSkill : Int
     , initiative: Int
+    , toughness: Int
     , acted: Bool
     , id : Int
     , team: Team
@@ -51,6 +52,7 @@ charactersInTeam : Team -> List Character -> List Character
 charactersInTeam team characters =
     List.filter (isInTeam team) characters
 
+generateCharacterWithTeam : (String, Team) -> Character
 generateCharacterWithTeam (type_,team)=
  generateCharacter type_ |> addTeam team
 
@@ -63,6 +65,7 @@ generateCharacter type_ =
             ,id=0
             ,team=NoTeam
             ,baseHP = 0, currentHP=0, weaponDmg = 0, weaponSkill = 0
+            , toughness=0
             ,initiative =0
             ,acted=False
          }
@@ -70,11 +73,16 @@ generateCharacter type_ =
     
         (case type_ of
             "Goblin" ->
-                { base|  baseHP = 4, weaponDmg = 3, weaponSkill = 30, initiative=25 }
+                { base|  baseHP = 11, weaponDmg = 7, weaponSkill = 25, initiative=20, toughness=40 }
 
             "Wolf" ->
-                {base|   baseHP = 22, weaponDmg = 5, weaponSkill = 55 ,initiative=35 }
-
+                {base|   baseHP = 10, weaponDmg = 6, weaponSkill = 35 ,initiative=35, toughness=40 }
+            "Human" ->
+                {base|   baseHP = 12, weaponDmg = 7, weaponSkill = 30 ,initiative=30, toughness=30 }
+            "Dwarf" ->
+                {base|   baseHP = 16, weaponDmg = 7, weaponSkill = 40 ,initiative=30, toughness=40 }
+            "Ogre" ->
+                {base|   baseHP = 28, weaponDmg = 8, weaponSkill = 30 ,initiative=10, toughness=45 }
             _ ->
                  base 
         ) |> addType type_
@@ -111,18 +119,31 @@ countTeamCharactersActive characters=
   in 
     (homeCount,awayCount)
  
-dealDamage : Character -> Character -> ( Character, String )
-dealDamage attacker defender =
-    ( { defender | currentHP = defender.currentHP - attacker.weaponDmg }, attacker.name ++ " hit " ++ defender.name ++ " for " ++ String.fromInt attacker.weaponDmg )
+dealDamage : Character -> Character -> Int -> ( Character, String )
+dealDamage attacker defender success=
+    let
+        dealt=max (attacker.weaponDmg+success-(Debug.log "T:" (defender.toughness//10))) 0
+        remainingHP= max (defender.currentHP - dealt) 0
+        
+    in
+    
+    ( { defender | currentHP = remainingHP }, attacker.name ++ " hit " ++ defender.name ++ " for " ++ String.fromInt dealt ++ (if remainingHP<1 then " killing them! " else ""))
 
+opposedSkillTest : Int -> Int -> Int -> Int -> Int
+opposedSkillTest attRoll defRoll attSkill defSkill=
+ (attSkill//10 - attRoll//10) - (defSkill//10-defRoll//10)
 
-attackCharacter : Int -> Character -> Character -> ( Character, String )
-attackCharacter roll attacker defender =
-    if roll < attacker.weaponSkill then
-        dealDamage attacker defender
+attackCharacter : (Int,Int) -> Character -> Character -> ( Character, String )
+attackCharacter (attRoll,defRoll) attacker defender =
+ let
+     success=opposedSkillTest (Debug.log "Att roll" attRoll) (Debug.log "Def roll" defRoll) attacker.weaponSkill defender.weaponSkill
+ in
+ 
+    if (Debug.log "succ: " success) >0 then
+        dealDamage attacker defender success
 
     else
-        ( defender, attacker.name ++ " missed a horrible wrong way a guy called" ++ defender.name )
+        ( defender, attacker.name ++ " missed " ++ defender.name )
 
 getCharacter : Int -> Array Character ->  Character
 getCharacter id characters=

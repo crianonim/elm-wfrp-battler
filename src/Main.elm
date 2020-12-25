@@ -2,18 +2,14 @@ module Main exposing (main)
 
 import Array exposing (Array)
 import Browser
-import Character exposing (Character, Team(..))
+import Character exposing (Character, Team(..), listStillToAct)
 import Dice
 import Html exposing (Attribute, Html, button, div, option, p, select, text)
-import Html.Attributes exposing (class)
+import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick, onInput)
 import Platform.Cmd exposing (Cmd)
 import Random
 import Utils
-import Html.Attributes exposing (classList)
-import Character
-import Character exposing (listStillToAct)
-
 
 
 main : Program () Model Msg
@@ -25,21 +21,28 @@ main =
         , view = view
         }
 
+
 initialCharacters : Array Character
-initialCharacters= List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away),("Goblin",NoTeam), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
-                |> Array.fromList
-                |> Array.indexedMap (\i c -> { c | name = c.name ++ "#" ++ String.fromInt i, id = i })
+initialCharacters =
+    List.map Character.generateCharacterWithTeam [ ( "Goblin", Home ), ( "Wolf", Home ), ( "Human", NoTeam ), ( "Human", Home ), ( "Ogre", Home ), ( "Goblin", Away ), ( "Dwarf", Away ), ( "Ogre", Away ) ]
+        |> Array.fromList
+        |> Array.indexedMap (\i c -> { c | name = c.name ++ "#" ++ String.fromInt i, id = i })
+
+
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { result = 0
-      , turn = 0
-      , phase =  InBattle
-      , characters =initialCharacters
+      , turn = 1
+      , phase = InBattle
+      , characters = initialCharacters
       , defender = 1
-      , currentCharacter = Character.listStillToAct (Array.filter Character.isAlive initialCharacters |> Array.toList)
-         |> List.head |> Maybe.withDefault Character.badCharacter |> .id
+      , currentCharacter =
+            Character.listStillToAct (Array.filter Character.isAlive initialCharacters |> Array.toList)
+                |> List.head
+                |> Maybe.withDefault Character.badCharacter
+                |> .id
       , log = [ "Started" ]
-      } 
+      }
     , Random.generate GotDice (Dice.rollGenerator 1 100)
     )
 
@@ -63,7 +66,7 @@ update msg model =
             in
             ( { model
                 | characters =
-                   Character.updateCharacter newDef model.characters
+                    Character.updateCharacter newDef model.characters
                 , log = newLog :: model.log
               }
                 |> nextCharacter
@@ -74,7 +77,7 @@ update msg model =
             ( nextCharacter model, Cmd.none )
 
         AttackClick ->
-            ( model, Random.generate Attack Dice.d100Generator )
+            ( model, Random.generate Attack (Random.pair Dice.d100Generator Dice.d100Generator) )
 
         ChooseDefendant x ->
             case String.toInt x of
@@ -86,10 +89,8 @@ update msg model =
 
         SelectTeamForCharacter id t ->
             let
-
-
                 team =
-                    Character.stringToTeam (t)
+                    Character.stringToTeam t
             in
             ( { model
                 | characters =
@@ -105,43 +106,82 @@ update msg model =
               }
             , Cmd.none
             )
-        CommitTeamSelection -> ({model|phase=InBattle},Cmd.none)
+
+        CommitTeamSelection ->
+            ( { model | phase = InBattle }, Cmd.none )
+
         ClickedCharacter id ->
-         let
-             chosenCharacter = Character.getCharacter id model.characters 
-             currentCharacter =Character.getCharacter model.currentCharacter model.characters 
-         in
-            if (Character.isAttackable currentCharacter chosenCharacter) then update AttackClick ({model|defender=id})
-            else  (model,Cmd.none)
-            
+            let
+                chosenCharacter =
+                    Character.getCharacter id model.characters
+
+                currentCharacter =
+                    Character.getCharacter model.currentCharacter model.characters
+            in
+            if Character.isAttackable currentCharacter chosenCharacter then
+                update AttackClick { model | defender = id }
+
+            else
+                ( model, Cmd.none )
 
 
 nextCharacter : Model -> Model
 nextCharacter model =
-   let 
-        (homeCount,awayCount) = Character.countTeamCharactersActive model.characters
-        currentCharacter = Character.getCharacter model.currentCharacter model.characters
-        modelAfterActed = {model|characters=Character.updateCharacter {currentCharacter|acted=True} model.characters}
-        stillToAct= Character.listStillToAct (Array.filter Character.isInBattle modelAfterActed.characters |> Array.toList)
-        hasActed=Character.listActed (Array.filter Character.isInBattle modelAfterActed.characters |> Array.toList)
-        turnFinished=List.length stillToAct == 0
-        newCurrentIndex = (if turnFinished then hasActed else stillToAct )
-         |> List.head |> Maybe.withDefault Character.badCharacter |> .id
-        
-        turn=(if turnFinished  then (modelAfterActed.turn+1) else modelAfterActed.turn)
-        characters=(if turnFinished then Array.map (\c->{c|acted=False}) modelAfterActed.characters else modelAfterActed.characters)
+    let
+        ( homeCount, awayCount ) =
+            Character.countTeamCharactersActive model.characters
+
+        currentCharacter =
+            Character.getCharacter model.currentCharacter model.characters
+
+        modelAfterActed =
+            { model | characters = Character.updateCharacter { currentCharacter | acted = True } model.characters }
+
+        stillToAct =
+            Character.listStillToAct (Array.filter Character.isInBattle modelAfterActed.characters |> Array.toList)
+
+        hasActed =
+            Character.listActed (Array.filter Character.isInBattle modelAfterActed.characters |> Array.toList)
+
+        turnFinished =
+            List.length stillToAct == 0
+
+        newCurrentIndex =
+            (if turnFinished then
+                hasActed
+
+             else
+                stillToAct
+            )
+                |> List.head
+                |> Maybe.withDefault Character.badCharacter
+                |> .id
+
+        turn =
+            if turnFinished then
+                modelAfterActed.turn + 1
+
+            else
+                modelAfterActed.turn
+
+        characters =
+            if turnFinished then
+                Array.map (\c -> { c | acted = False }) modelAfterActed.characters
+
+            else
+                modelAfterActed.characters
+
         newModel =
-            { modelAfterActed | currentCharacter = newCurrentIndex , characters=characters, turn=turn }  
+            { modelAfterActed | currentCharacter = newCurrentIndex, characters = characters, turn = turn }
     in
-    (case (homeCount*awayCount > 0 ) of
+    (case homeCount * awayCount > 0 of
         False ->
             { model | phase = BattleFinished }
 
-        True ->        
+        True ->
             newModel
     )
         |> characterTurnStart
-
 
 
 characterTurnStart : Model -> Model
@@ -158,7 +198,7 @@ characterTurnStart model =
 
 type alias Model =
     { result : Int
-    , turn: Int
+    , turn : Int
     , phase : GamePhase
     , characters : Array Character
     , defender : Int
@@ -169,7 +209,7 @@ type alias Model =
 
 type Msg
     = GotDice (List Int)
-    | Attack Int
+    | Attack ( Int, Int )
     | AttackClick
     | NextCharacter
     | ChooseDefendant String
@@ -200,8 +240,7 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     div []
-        [ div [] [ text (String.fromInt model.turn) ]
-        
+        [ div [] [ "Turn: " ++ (String.fromInt model.turn) |> text ]
         , div []
             [ case model.phase of
                 BattleFinished ->
@@ -213,7 +252,6 @@ view model =
                 TeamSelection ->
                     viewTeamSelection model
             ]
-        , viewLog model.log
         ]
 
 
@@ -226,7 +264,7 @@ viewTeamSelection model =
                 (\c ->
                     div []
                         [ text c.name
-                        , select [ onInput (SelectTeamForCharacter c.id)]
+                        , select [ onInput (SelectTeamForCharacter c.id) ]
                             (List.map
                                 (\t ->
                                     option
@@ -242,7 +280,7 @@ viewTeamSelection model =
                 model.characters
                 |> Array.toList
             )
-        , button [onClick CommitTeamSelection] [text "Start"]
+        , button [ onClick CommitTeamSelection ] [ text "Start" ]
         ]
 
 
@@ -250,73 +288,84 @@ viewInBattle : Model -> Html Msg
 viewInBattle model =
     div []
         [ p [] [ text "Battle is on!" ]
-        , div [class "sides-container"] [
-          div [class "side-home"] (List.map (viewCharacter model.currentCharacter) (Character.charactersInTeam Home (Array.toList model.characters)))
-          ,div [class "sides-middle"] [
-               div [class "actions"] [text "actions"]
-               ,viewLog model.log]
-         ,div [class "side-away"] (List.map (viewCharacter model.currentCharacter) (Character.charactersInTeam Away (Array.toList model.characters)))
-         ]
-        , button [ onClick AttackClick ] [ text "Attack" ]
-        , button [ onClick NextCharacter ] [ text "Next" ]
-        , div [ ] [ viewListAliveCharacters model ]
+        , div [ class "sides-container" ]
+            [ div [ class "side-home" ] (List.map (viewCharacter model.currentCharacter) (Character.charactersInTeam Home (Array.toList model.characters)))
+            , div [ class "sides-middle" ]
+                [ div [ class "actions" ]
+                    [ button [ onClick AttackClick ] [ text "Attack" ]
+                    , div [] [ viewListAliveCharacters model ]
+                    , button [ onClick NextCharacter ] [ text "Next" ]
+                    ]
+                , viewLog model.log
+                ]
+            , div [ class "side-away" ] (List.map (viewCharacter model.currentCharacter) (Character.charactersInTeam Away (Array.toList model.characters)))
+            ]
+        
         , viewBattleQueue model.characters model.currentCharacter
         ]
 
+
 viewBattleQueue : Array Character -> Int -> Html Msg
-viewBattleQueue characters currentCharacterId=
- div [class "battle-queue"] 
-     (List.concat([
-     List.map (viewCharacter currentCharacterId) (Array.toList characters 
- |> List.filter Character.isInBattle 
- |> Character.listStillToAct
- )
- , [div [Html.Attributes.style "width" "100px"] [text "New Turn"]]
- , List.map (viewCharacter currentCharacterId) (Array.toList characters 
- |> List.filter Character.isInBattle 
- |> Character.listActed
- )]))
- 
- 
+viewBattleQueue characters currentCharacterId =
+    div [ class "battle-queue" ]
+        (List.concat
+            [ List.map (viewCharacter currentCharacterId)
+                (Array.toList characters
+                    |> List.filter Character.isInBattle
+                    |> Character.listStillToAct
+                )
+            , [ div [ Html.Attributes.style "width" "100px" ] [ text "New Turn" ] ]
+            , List.map (viewCharacter currentCharacterId)
+                (Array.toList characters
+                    |> List.filter Character.isInBattle
+                    |> Character.listActed
+                )
+            ]
+        )
+
 
 viewLog : List String -> Html msg
-viewLog log = div [class "log"] (List.map viewLogLine log)
-
-
+viewLog log =
+    div [ class "log" ] (List.map viewLogLine log)
 
 
 viewBattleFinished : Model -> Html msg
 viewBattleFinished model =
     div []
         [ p [] [ text "Battle finished" ]
-        , p [] [ text ("Won " ++ ( 
-            let
-              (homeCount,awayCount) =Character.countTeamCharactersActive model.characters
-             in 
-              if (homeCount>awayCount) then " Home " else " Away "
-            ) ++ " team.") ]
+        , p []
+            [ text
+                ("Won "
+                    ++ (let
+                            ( homeCount, awayCount ) =
+                                Character.countTeamCharactersActive model.characters
+                        in
+                        if homeCount > awayCount then
+                            " Home "
+
+                        else
+                            " Away "
+                       )
+                    ++ " team."
+                )
+            ]
         ]
 
 
 viewCharacter : Int -> Character.Character -> Html Msg
 viewCharacter currentCharacterId character =
     div
-        ([ 
-          classList [
-              ("character-block",True)
-              ,("dead",not <| Character.isAlive character)
-              ,("current-character",character.id == currentCharacterId)
-              ,("acted",character.acted)
-              ,( "away-fg", character.team==Away)
-              ,( "home-fg", character.team==Home)
-          ]
-         ,onClick (ClickedCharacter character.id)
-         ]
-            
-        )
+        [ classList
+            [ ( "character-block", True )
+            , ( "dead", not <| Character.isAlive character )
+            , ( "current-character", character.id == currentCharacterId )
+            , ( "acted", character.acted )
+            , ( "away-fg", character.team == Away )
+            , ( "home-fg", character.team == Home )
+            ]
+        , onClick (ClickedCharacter character.id)
+        ]
         [ text <| character.name ++ " " ++ String.fromInt character.currentHP ++ "/    " ++ String.fromInt character.baseHP ]
-
-
 
 
 viewLogLine : String -> Html msg
