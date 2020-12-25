@@ -29,7 +29,7 @@ init _ =
     ( { result = 0
       , phase =  InBattle
       , characters =
-            List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
+            List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away),("Goblin",NoTeam), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
                 |> Array.fromList
                 |> Array.indexedMap (\i c -> { c | name = c.name ++ "#" ++ String.fromInt i, id = i })
       , defender = 1
@@ -107,8 +107,8 @@ update msg model =
              chosenCharacter = Character.getCharacter id model.characters 
              currentCharacter =Character.getCharacter model.currentCharacter model.characters 
          in
-            if (chosenCharacter.team==currentCharacter.team) then (model,Cmd.none)
-            else  update AttackClick ({model|defender=id})
+            if (Character.isAttackable currentCharacter chosenCharacter) then update AttackClick ({model|defender=id})
+            else  (model,Cmd.none)
             
 
 
@@ -248,17 +248,22 @@ viewInBattle model =
     div []
         [ p [] [ text "Battle is on!" ]
         , div [class "sides-container"] [
-          div [class "side-home"] (List.map (viewCharacter model) (Character.charactersInTeam Home (Array.toList model.characters)))
+          div [class "side-home"] (List.map (viewCharacter model.currentCharacter) (Character.charactersInTeam Home (Array.toList model.characters)))
           ,div [class "sides-middle"] [
                div [class "actions"] [text "actions"]
                ,viewLog model.log]
-         ,div [class "side-away"] (List.map (viewCharacter model) (Character.charactersInTeam Away (Array.toList model.characters)))
+         ,div [class "side-away"] (List.map (viewCharacter model.currentCharacter) (Character.charactersInTeam Away (Array.toList model.characters)))
          ]
         , button [ onClick AttackClick ] [ text "Attack" ]
         , button [ onClick NextCharacter ] [ text "Next" ]
-        , div [class "characters-block"] (List.map (viewCharacter model) (Array.toList model.characters))
+        , viewBattleQueue model.characters model.currentCharacter
         , div [ ] [ viewListAliveCharacters model ]
         ]
+
+viewBattleQueue : Array Character -> Int -> Html Msg
+viewBattleQueue characters currentCharacterId=
+ div [class "battle-queue"] (List.map (viewCharacter currentCharacterId) (Array.toList characters))
+ 
 
 viewLog : List String -> Html msg
 viewLog log = div [class "log"] (List.map viewLogLine log)
@@ -279,14 +284,14 @@ viewBattleFinished model =
         ]
 
 
-viewCharacter : Model -> Character.Character -> Html Msg
-viewCharacter model character =
+viewCharacter : Int -> Character.Character -> Html Msg
+viewCharacter currentCharacterId character =
     div
         ([ 
           classList [
               ("character-block",True)
               ,("dead",not <| Character.isAlive character)
-              ,("current-character",character.id == model.currentCharacter)
+              ,("current-character",character.id == currentCharacterId)
               ,( "away-fg", character.team==Away)
               ,( "home-fg", character.team==Home)
           ]
