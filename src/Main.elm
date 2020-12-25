@@ -49,25 +49,17 @@ update msg model =
         Attack d100 ->
             let
                 att =
-                    Array.get model.currentCharacter model.characters |> Maybe.withDefault Character.badCharacter
+                    Character.getCharacter model.currentCharacter model.characters
 
                 def =
-                    Array.get model.defender model.characters |> Maybe.withDefault Character.badCharacter
+                    Character.getCharacter model.defender model.characters
 
                 ( newDef, newLog ) =
                     Character.attackCharacter d100 att def
             in
             ( { model
                 | characters =
-                    Array.indexedMap
-                        (\i c ->
-                            if i == model.defender then
-                                newDef
-
-                            else
-                                c
-                        )
-                        model.characters
+                   Character.updateCharacter newDef model.characters
                 , log = newLog :: model.log
               }
                 |> nextCharacter
@@ -121,12 +113,7 @@ nextCharacter model =
             Utils.incOverflow model.currentCharacter (Array.length model.characters)
 
         newCurrentCharacter =
-            case Array.get newCurrentIndex model.characters of
-                Just c ->
-                    c
-
-                Maybe.Nothing ->
-                    Character.badCharacter
+            Character.getCharacter newCurrentIndex model.characters
 
         newModel =
             { model | currentCharacter = newCurrentIndex }
