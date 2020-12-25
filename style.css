@@ -14,19 +14,51 @@
 }
 
 .dead {
-    opacity: 0.5;
-    text-decoration: line-through;
+  opacity: 0.5;
+  text-decoration: line-through;
 }
 
 .current-character {
-    border: 3px solid
+  border: 3px solid!Important;
 }
 .character-block {
-    width: 150px;
-    height: 150px;
-    padding: 1em;
-    margin: 1em;
+  width: 100px;
+  height: 100px;
+  padding: 1em;
+  margin: 1em;
+  border: 1px solid;
 }
 .characters-block {
-    display: flex
+  display: flex;
+}
+
+.sides-container {
+  padding: 1em;
+  display: flex;
+  justify-content: space-between;
+  border: 1px solid black;
+}
+.side-home,
+.side-away {
+  width: 40%;
+}
+.side-home {
+  background-color: rgba(250, 93, 93, 0.42);
+}
+
+.side-away {
+  background-color: rgba(158, 158, 250, 0.379);
+}
+.sides-middle {
+  width: 100%;
+}
+.log {
+  height: 45%;
+ 
+  border: dashed 1px;
+  overflow-y: scroll;
+}
+.actions {
+  height: 45%;
+  border: dashed 1px blue;
 }
