@@ -65,3 +65,7 @@
   height: 45%;
   border: dashed 1px blue;
 }
+
+.acted {
+  font-style: italic;
+}

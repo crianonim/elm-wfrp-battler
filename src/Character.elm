@@ -11,6 +11,8 @@ type alias Character =
     , currentHP : Int
     , weaponDmg : Int
     , weaponSkill : Int
+    , initiative: Int
+    , acted: Bool
     , id : Int
     , team: Team
     }
@@ -61,15 +63,17 @@ generateCharacter type_ =
             ,id=0
             ,team=NoTeam
             ,baseHP = 0, currentHP=0, weaponDmg = 0, weaponSkill = 0
+            ,initiative =0
+            ,acted=False
          }
     in
     
         (case type_ of
             "Goblin" ->
-                { base|  baseHP = 4, weaponDmg = 3, weaponSkill = 30 }
+                { base|  baseHP = 4, weaponDmg = 3, weaponSkill = 30, initiative=25 }
 
             "Wolf" ->
-                {base|   baseHP = 22, weaponDmg = 5, weaponSkill = 55 }
+                {base|   baseHP = 22, weaponDmg = 5, weaponSkill = 55 ,initiative=35 }
 
             _ ->
                  base 
@@ -149,3 +153,18 @@ listOfOpponents characters characterId =
 
 isAttackable attacker character=
  (isOppositeTeam attacker character) && (isAlive character)
+
+
+isInBattle character=
+ (isAlive character) && (isInAnyTeam character)
+listStillToAct : List Character -> List Character
+listStillToAct inBattleCharacters= 
+ List.filter (\c-> not c.acted) inBattleCharacters 
+ |> List.sortBy .initiative 
+ |> List.reverse
+
+listActed : List Character -> List Character
+listActed inBattleCharacters= 
+ List.filter .acted inBattleCharacters 
+ |> List.sortBy .initiative 
+ |> List.reverse

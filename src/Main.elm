@@ -11,6 +11,8 @@ import Platform.Cmd exposing (Cmd)
 import Random
 import Utils
 import Html.Attributes exposing (classList)
+import Character
+import Character exposing (listStillToAct)
 
 
 
@@ -23,19 +25,21 @@ main =
         , view = view
         }
 
-
+initialCharacters : Array Character
+initialCharacters= List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away),("Goblin",NoTeam), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
+                |> Array.fromList
+                |> Array.indexedMap (\i c -> { c | name = c.name ++ "#" ++ String.fromInt i, id = i })
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { result = 0
+      , turn = 0
       , phase =  InBattle
-      , characters =
-            List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away),("Goblin",NoTeam), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
-                |> Array.fromList
-                |> Array.indexedMap (\i c -> { c | name = c.name ++ "#" ++ String.fromInt i, id = i })
+      , characters =initialCharacters
       , defender = 1
-      , currentCharacter = 0
+      , currentCharacter = Character.listStillToAct (Array.filter Character.isAlive initialCharacters |> Array.toList)
+         |> List.head |> Maybe.withDefault Character.badCharacter |> .id
       , log = [ "Started" ]
-      }
+      } 
     , Random.generate GotDice (Dice.rollGenerator 1 100)
     )
 
@@ -116,27 +120,25 @@ nextCharacter : Model -> Model
 nextCharacter model =
    let 
         (homeCount,awayCount) = Character.countTeamCharactersActive model.characters
-
-        newCurrentIndex =
-            Utils.incOverflow model.currentCharacter (Array.length model.characters)
-
-        newCurrentCharacter =
-            Character.getCharacter newCurrentIndex model.characters
-
+        currentCharacter = Character.getCharacter model.currentCharacter model.characters
+        modelAfterActed = {model|characters=Character.updateCharacter {currentCharacter|acted=True} model.characters}
+        stillToAct= Character.listStillToAct (Array.filter Character.isInBattle modelAfterActed.characters |> Array.toList)
+        hasActed=Character.listActed (Array.filter Character.isInBattle modelAfterActed.characters |> Array.toList)
+        turnFinished=List.length stillToAct == 0
+        newCurrentIndex = (if turnFinished then hasActed else stillToAct )
+         |> List.head |> Maybe.withDefault Character.badCharacter |> .id
+        
+        turn=(if turnFinished  then (modelAfterActed.turn+1) else modelAfterActed.turn)
+        characters=(if turnFinished then Array.map (\c->{c|acted=False}) modelAfterActed.characters else modelAfterActed.characters)
         newModel =
-            { model | currentCharacter = newCurrentIndex }
+            { modelAfterActed | currentCharacter = newCurrentIndex , characters=characters, turn=turn }  
     in
     (case (homeCount*awayCount > 0 ) of
         False ->
             { model | phase = BattleFinished }
 
-        True ->
-            case (Character.isAlive newCurrentCharacter && Character.isInAnyTeam newCurrentCharacter) of
-                False ->
-                    nextCharacter newModel
-
-                True ->
-                    newModel
+        True ->        
+            newModel
     )
         |> characterTurnStart
 
@@ -156,6 +158,7 @@ characterTurnStart model =
 
 type alias Model =
     { result : Int
+    , turn: Int
     , phase : GamePhase
     , characters : Array Character
     , defender : Int
@@ -197,7 +200,7 @@ subscriptions model =
 view : Model -> Html Msg
 view model =
     div []
-        [ div [] [ text (String.fromInt model.result) ]
+        [ div [] [ text (String.fromInt model.turn) ]
         
         , div []
             [ case model.phase of
@@ -256,13 +259,24 @@ viewInBattle model =
          ]
         , button [ onClick AttackClick ] [ text "Attack" ]
         , button [ onClick NextCharacter ] [ text "Next" ]
-        , viewBattleQueue model.characters model.currentCharacter
         , div [ ] [ viewListAliveCharacters model ]
+        , viewBattleQueue model.characters model.currentCharacter
         ]
 
 viewBattleQueue : Array Character -> Int -> Html Msg
 viewBattleQueue characters currentCharacterId=
- div [class "battle-queue"] (List.map (viewCharacter currentCharacterId) (Array.toList characters))
+ div [class "battle-queue"] 
+     (List.concat([
+     List.map (viewCharacter currentCharacterId) (Array.toList characters 
+ |> List.filter Character.isInBattle 
+ |> Character.listStillToAct
+ )
+ , [div [Html.Attributes.style "width" "100px"] [text "New Turn"]]
+ , List.map (viewCharacter currentCharacterId) (Array.toList characters 
+ |> List.filter Character.isInBattle 
+ |> Character.listActed
+ )]))
+ 
  
 
 viewLog : List String -> Html msg
@@ -292,6 +306,7 @@ viewCharacter currentCharacterId character =
               ("character-block",True)
               ,("dead",not <| Character.isAlive character)
               ,("current-character",character.id == currentCharacterId)
+              ,("acted",character.acted)
               ,( "away-fg", character.team==Away)
               ,( "home-fg", character.team==Home)
           ]
