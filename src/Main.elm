@@ -27,7 +27,7 @@ main =
 init : () -> ( Model, Cmd Msg )
 init _ =
     ( { result = 0
-      , phase =  TeamSelection
+      , phase =  InBattle
       , characters =
             List.map Character.generateCharacterWithTeam [ ("Goblin",Home), ("Wolf",Away), ("Wolf",Home),("Goblin",Home), ("Goblin",Away)]
                 |> Array.fromList
@@ -102,6 +102,14 @@ update msg model =
             , Cmd.none
             )
         CommitTeamSelection -> ({model|phase=InBattle},Cmd.none)
+        ClickedCharacter id ->
+         let
+             chosenCharacter = Character.getCharacter id model.characters 
+             currentCharacter =Character.getCharacter model.currentCharacter model.characters 
+         in
+            if (chosenCharacter.team==currentCharacter.team) then (model,Cmd.none)
+            else  update AttackClick ({model|defender=id})
+            
 
 
 nextCharacter : Model -> Model
@@ -123,7 +131,7 @@ nextCharacter model =
             { model | phase = BattleFinished }
 
         True ->
-            case (Character.isAlive newCurrentCharacter && Character.isInTeam newCurrentCharacter) of
+            case (Character.isAlive newCurrentCharacter && Character.isInAnyTeam newCurrentCharacter) of
                 False ->
                     nextCharacter newModel
 
@@ -164,6 +172,7 @@ type Msg
     | ChooseDefendant String
     | SelectTeamForCharacter Int String
     | CommitTeamSelection
+    | ClickedCharacter Int
 
 
 type GamePhase
@@ -201,7 +210,7 @@ view model =
                 TeamSelection ->
                     viewTeamSelection model
             ]
-        , div [] (List.map viewLogLine model.log)
+        , viewLog model.log
         ]
 
 
