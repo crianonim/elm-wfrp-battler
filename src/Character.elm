@@ -35,7 +35,7 @@ stringToTeam s =
 
 isInTeam : Character -> Bool
 isInTeam c=
- not (c.team == NoTeam)
+ c.team /= NoTeam
 
 generateCharacterWithTeam (type_,team)=
  generateCharacter type_ |> addTeam team
@@ -108,6 +108,13 @@ attackCharacter roll attacker defender =
     else
         ( defender, attacker.name ++ " missed " ++ defender.name )
 
+getCharacter : Int -> Array Character ->  Character
+getCharacter id characters=
+    Array.get id characters |> Maybe.withDefault badCharacter
+
+updateCharacter : Character ->  Array Character -> Array Character
+updateCharacter character characters=
+    Array.map (\c -> if c.id==character.id then character else c) characters
 
 listAliveCharacters : Array Character -> List Character
 listAliveCharacters arr =
