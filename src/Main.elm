@@ -2,14 +2,13 @@ module Main exposing (main)
 
 import Array exposing (Array)
 import Browser
-import Character exposing (Character, Team(..), listStillToAct)
+import Character exposing (Character, Team(..))
 import Dice
 import Html exposing (Attribute, Html, button, div, option, p, select, text)
 import Html.Attributes exposing (class, classList)
 import Html.Events exposing (onClick, onInput)
 import Platform.Cmd exposing (Cmd)
 import Random
-import Utils
 
 
 main : Program () Model Msg
